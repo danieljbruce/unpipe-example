@@ -1,5 +1,4 @@
-// Node.js program to demonstrate the
-// readable.unpipe() method
+// Here we
 
 // Accessing fs module
 const fs = require('fs');
@@ -10,7 +9,24 @@ const Stream = require('stream');
 // Constructing readable stream
 // const readable = fs.createReadStream("input.text");
 const readableStream = fs.createReadStream('./read.txt');
+readableStream.on('readable', () => {
+  let chunk;
+  // Using while loop and calling
+  // read method with parameter
+  while (null !== (chunk = readableStream.read(1))) {
+    console.log(`read: ${chunk}`);
+    firstDuplex.write(chunk);
+    /*
+    if (chunk.toString() === '2') {
+      firstDuplex.emit('error', new Error('Error occurred'));
+    }
+     */
+    // Displaying the chunk
+  }
+})
 const userStream = new Stream.Transform({
+  readableHighWaterMark: 0,
+  writableHighWaterMark: 0,
   transform(
       row,
       _encoding,
@@ -52,7 +68,7 @@ const secondDuplex = new Stream.Transform({
     callback(null, row);
   }
 })
-readableStream.pipe(firstDuplex);
+// readableStream.pipe(firstDuplex);
 firstDuplex.pipe(secondDuplex);
 secondDuplex.pipe(userStream, {end: false});
 secondDuplex.on('data', function (chunk) {
@@ -60,4 +76,8 @@ secondDuplex.on('data', function (chunk) {
   console.log('Getting data in handler');
   console.log(chunk.toString().split('\n'));
 });
+secondDuplex.on('error', (error) => {
+  console.log('Error occurred');
+  console.log(error)
+})
 console.log("done");
