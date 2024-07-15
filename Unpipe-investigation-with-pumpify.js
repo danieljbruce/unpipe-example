@@ -16,6 +16,10 @@ readableStream.on('readable', () => {
   // read method with parameter
   while (null !== (chunk = readableStream.read(1))) {
     console.log(`read: ${chunk}`);
+    const chunkName = chunk;
+    setImmediate(() => {
+      console.log(`event added before chunk write ${chunkName}`);
+    });
     firstDuplex.write(chunk);
     if (chunk.toString() === '2') {
       firstDuplex.emit('error', new Error('Error occurred'));
