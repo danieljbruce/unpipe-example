@@ -12,7 +12,7 @@ class UserStream extends Stream.Transform {
         console.log('In User Stream transform');
         console.log(row.toString().split('\n'));
         callback(null, row);
-      },
+      }
       /*
       write(chunk, encoding, cb) {
         const message = `userstream.write ${chunk.toString()}`;
@@ -62,7 +62,7 @@ class FirstDuplex extends Stream.Transform {
     }
     console.log('> FirstDuplex.emit', event, message);
     if (event === 'data' && args[0].toString() === '2') {
-      firstDuplex.unpipe(userStream);
+      firstDuplex.unpipe(userStream2);
     }
     return super.emit(event, ...args);
   }
@@ -85,4 +85,38 @@ readableStream.on('readable', () => {
 })
 const firstDuplex = new FirstDuplex();
 const userStream = new UserStream();
-firstDuplex.pipe(userStream);
+const userStream2 = new Stream.Transform({
+  transform(
+      row,
+      _encoding,
+      callback
+  ) {
+    console.log('In User Stream 2 transform');
+    console.log(row.toString().split('\n'));
+    callback(null, row);
+  },
+  construct(callback) {
+    console.log('constructing')
+    callback();
+  },
+  /*
+  write(chunk, encoding, cb) {
+    const message = `userstream2.write ${chunk.toString()}`;
+    console.log(message);
+    // cb(null, chunk);
+  },
+   */
+  writev(chunks, callback) {
+    const message = `userstream2.writev ${chunks.toString()}`;
+    console.log(message);
+    callback(null, chunks);
+  }
+});
+/*
+write(chunk, encoding, cb) {
+  const message = `userstream.write ${chunk.toString()}`;
+  console.log(message);
+  cb();
+}
+ */
+firstDuplex.pipe(userStream2);
