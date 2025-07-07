@@ -42,7 +42,6 @@ setTimeout(() => {
 // behavior when a read happens.
 class TransformWithReadHook extends Stream.PassThrough {
   lastTransformRow = '';
-
   constructor(opts) {
     super(opts);
   }
@@ -52,25 +51,26 @@ class TransformWithReadHook extends Stream.PassThrough {
     return super.read(size);
   }
 
+  /*
   _read() {
     log(`The last transformed row was ${this.lastTransformRow}. In _read hook`);
     return super._read();
   }
+   */
 }
 
 // This is what a user stream looks like in our client libraries. This is the
 // stream that the user will iterate through.
 const userStream = new TransformWithReadHook({
-  readableHighWaterMark: 0,
+  highWaterMark: 1,
+  readableHighWaterMark: 1,
   writableHighWaterMark: 0,
+  /*
   flush(callback) {
     log(`Last transformed row = ${this.lastTransformRow.toString()}. In flush hook`);
     callback();
   },
-  final(callback) {
-    log(`Last transformed row = ${this.lastTransformRow.toString()} In final`);
-    callback(null);
-  },
+   */
   transform(
       row,
       _encoding,
@@ -79,7 +79,13 @@ const userStream = new TransformWithReadHook({
     log(`${row.toString()} In user stream transform`);
     this.lastTransformRow = row.toString();
     callback(null, row);
+  },
+  /*
+  final(callback) {
+    log(`Last transformed row = ${this.lastTransformRow.toString()} In final`);
+    callback(null);
   }
+   */
 });
 
 // This function simulates what happens when a new data event arrives from the
@@ -119,13 +125,12 @@ secondDuplex.pipe(userStream, {end: false});
 // timestamps it produces.
 setTimeout(async () => {
   log('running set timeout');
-  for await (const row of userStream) {
+  userStream.on('data', async (row) => {
     log(`started loop iteration ${row}`);
     // Pretend the loop takes a full second to run
     // This simulates a realistic situation that could happen with a for loop
     // and also lets us see where this time is consumed in the logging.
     await sleep(1000);
     log(`ended loop iteration ${row}`);
-  }
-  log(`finished loop`);
+  });
 }, 12000); // Suppose we encounter the loop when 2 events are queued
