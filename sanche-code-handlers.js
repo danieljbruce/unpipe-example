@@ -1,3 +1,9 @@
+/**
+ * This code respresents a situation where all the data is ready for consumption.
+ * It emits a BEFORE event with a bunch of TRANSFORM events in between and then
+ * an AFTER event.
+ */
+
 const { PassThrough, Readable  } = require('stream');
 
 const startTime = Date.now();
@@ -55,7 +61,10 @@ async function main() {
     }
   }
   const sourceStream = Readable.from(numberGenerator(30));
-  const timedStream = new TimedStream();
+  const timedStream = new TimedStream({transform: (chunk, encoding, callback) => {
+      log(`[TRANSFORM]`);
+      callback(null, chunk);
+    }});
   sourceStream.pipe(timedStream);
 
   log('--- Stream Started ---');

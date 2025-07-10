@@ -1,6 +1,8 @@
 const { PassThrough, Readable  } = require('stream');
 
 const startTime = Date.now();
+let timedStreamStartTime;
+let timedStreamDuration;
 
 function log(message) {
   const milliseconds = Date.now();
@@ -20,13 +22,13 @@ class TimedStream extends PassThrough {
   }
 
   _read(size) {
-    log(`_read called`);
+    log(`_transform called`);
     super._read(size);
     this.emit('before_row');
-    // Defer the after call to the next tick of the event loop
-    process.nextTick(() => {
+    Promise.resolve().then(() => {
       this.emit('after_row');
-    });
+    })
+    // Defer the after call to the next tick of the event loop
   }
 
   handleBeforeRow() {
@@ -54,26 +56,27 @@ async function main() {
       yield String(i) + "\n";
     }
   }
-  const sourceStream = Readable.from(numberGenerator(10));
-  const timedStream = new TimedStream({transform: (chunk, encoding, callback) => {
-      log(`[TRANSFORM]`);
-      callback(null, chunk);
-    }});
+  const sourceStream = Readable.from(numberGenerator(30));
+  const timedStream = new TimedStream();
   sourceStream.pipe(timedStream);
 
   log('--- Stream Started ---');
 
-  // iterate stream
-  for await (const chunk of timedStream) {
-    process.stdout.write(chunk.toString());
-    // Simulate 1 second of busy work
-    const startTime = Date.now();
-    while (Date.now() - startTime < 1000) {}
-  }
-  // print results
-  log('--- Stream Finished ---');
-  const totalMilliseconds = timedStream.getTotalDurationMs();
-  log(`\nTotal time spent between 'before_row' and 'after_row' events: ${totalMilliseconds} ms.`);
+  setTimeout(async () => {
+    // iterate stream
+    timedStream.on('data', async (chunk) => {
+      process.stdout.write(chunk.toString());
+      // Simulate 1 second of busy work
+      const startTime = Date.now();
+      while (Date.now() - startTime < 1000) {}
+    })
+    timedStream.on('end', () => {
+      // print results
+      log('--- Stream Finished ---');
+      const totalMilliseconds = timedStream.getTotalDurationMs();
+      log(`\nTotal time spent between 'before_row' and 'after_row' events: ${totalMilliseconds} ms.`);
+    })
+  }, 500);
 }
 
 main();

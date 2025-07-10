@@ -1,3 +1,10 @@
+/**
+ * This example simulates a situation where there is delay on the data from the
+ * server. The transform event occurs about 5 seconds after the BEFORE/AFTER
+ * events so these programmatic hooks cannot capture the 1 second spent in the
+ * handler.
+ */
+
 const { PassThrough, Readable  } = require('stream');
 
 const startTime = Date.now();
@@ -68,7 +75,10 @@ async function main() {
     }
   }
   const sourceStream = PassThrough();
-  const timedStream = new TimedStream();
+  const timedStream = new TimedStream({transform: (chunk, encoding, callback) => {
+    log(`[TRANSFORM]`);
+    callback(null, chunk);
+  }});
   sourceStream.pipe(timedStream);
 
   log('--- Stream Started ---');
